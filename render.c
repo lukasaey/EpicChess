@@ -90,8 +90,8 @@ void render_board(SDL_Renderer *renderer, const game_t *game)
 {
     uint32_t color = WHITE_SQUARE_COLOR;
 
-    for (int y = 0; y < BOARD_N; ++y) {
-        for (int x = 0; x < BOARD_N; ++x) {
+    for (Uint32 y = 0; y < BOARD_N; ++y) {
+        for (Uint32 x = 0; x < BOARD_N; ++x) {
             SDL_Rect rect = {
                 .x = x * (SCREEN_WIDTH/8),
                 .y = y * (SCREEN_HEIGHT/8),

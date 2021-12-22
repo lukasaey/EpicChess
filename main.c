@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
         .board = {0}, 
         .player = WHITE_PLAYER,
         .selected = NONE_SELECTED,
+        .en_passantable = NONE_SELECTED,
     };
 
     memcpy(game.board, DEFAULT_BOARD, 64);

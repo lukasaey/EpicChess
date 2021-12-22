@@ -35,7 +35,7 @@ static_assert(SCREEN_HEIGHT / SCREEN_WIDTH == 1, "Screen ratio must be 1:1");
 #define BLACK  0b01000000
 #define WHITE  0b10000000
 
-#define NONE_SELECTED -1
+#define NONE_SELECTED ((BOARD_N*BOARD_N)+1)
 
 /* RGBA */
 #define WHITE_SQUARE_COLOR 0xefe4d4ff
@@ -50,7 +50,8 @@ typedef enum {
 typedef struct {
     uint8_t board[BOARD_N * BOARD_N];
     player_t player;
-    int selected;
+    size_t selected;
+    size_t en_passantable;
 } game_t;
 
 #endif /* GAME_H */

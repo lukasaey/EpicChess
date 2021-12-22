@@ -1,14 +1,18 @@
 CC=gcc
-ARGS=-g -Wall -Wextra -Wshadow  -lmingw32 -lSDL2main -lSDL2
+DEBUGARGS=-g -Wall -Wextra -Wshadow -lmingw32 -lSDL2main -lSDL2
+RELEASEARGS=-O2 -lmingw32 -lSDL2main -lSDL2
 # to get rid of console: -mwindows
 
-all: main
+all: debug
 
-main: main.o logic.o render.o
-	$(CC) main.o logic.o render.o -o main $(ARGS) 
+debug: main.o logic.o render.o
+	$(CC) main.o logic.o render.o -o main $(DEBUGARGS) 
+
+release: main.o logic.o render.o
+	$(CC) main.o logic.o render.o -omain $(RELEASEARGS)
 
 %.o: %.c
-	$(CC) -c $^ $(ARGS) 
+	$(CC) -c $^ $(DEBUGARGS) 
 
 clean:
 	rm main.exe *.o
