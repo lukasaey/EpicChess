@@ -4,12 +4,9 @@
 #include <stdint.h>
 #include <assert.h>
 
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 800
+#define SCREEN_SIZE 800
 #define BOARD_N 8
-#define CELL_SIZE (SCREEN_WIDTH/BOARD_N)
-
-static_assert(SCREEN_HEIGHT / SCREEN_WIDTH == 1, "Screen ratio must be 1:1");
+#define CELL_SIZE (SCREEN_SIZE/BOARD_N)
 
 #define W_PAWN_FILEPATH "./svg/wP.svg"
 #define W_BISHOP_FILEPATH "./svg/wB.svg"
@@ -41,6 +38,7 @@ static_assert(SCREEN_HEIGHT / SCREEN_WIDTH == 1, "Screen ratio must be 1:1");
 #define WHITE_SQUARE_COLOR 0xefe4d4ff
 #define BLACK_SQUARE_COLOR 0x535353ff
 #define SELECTED_SQUARE_COLOR 0xd61515ff
+#define LEGAL_SQUARE_COLOR 0xed3232ff
 
 typedef enum {
     WHITE_PLAYER,

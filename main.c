@@ -20,7 +20,6 @@ const uint8_t DEFAULT_BOARD[64] =
     WHITE | ROOK, WHITE | KNIGHT, WHITE | BISHOP, WHITE | QUEEN, WHITE | KING, WHITE | BISHOP, WHITE | KNIGHT, WHITE | ROOK,
 };
 
-
 int main(int argc, char *argv[])
 {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -29,7 +28,7 @@ int main(int argc, char *argv[])
     }
 
     SDL_Window *window = SDL_CreateWindow("EpicChess", 100, 100,
-                                 SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+                                 SCREEN_SIZE, SCREEN_SIZE, SDL_WINDOW_SHOWN);
 
     if (window == NULL) {
         fprintf(stderr, "SDL_CreateWindow error: %s\n", SDL_GetError());
@@ -57,7 +56,7 @@ int main(int argc, char *argv[])
 
     memcpy(game.board, DEFAULT_BOARD, 64);
 
-    const int cell_size = SCREEN_HEIGHT / BOARD_N;
+    const int cell_size = SCREEN_SIZE / BOARD_N;
     
     SDL_Event e;
     int quit = 0;

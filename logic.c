@@ -5,7 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 
-bool is_legal(const game_t *game, size_t origin, size_t dest, bool *enpassant, bool *firstmove)
+LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
 {
     bool is_white = game->board[origin] & WHITE;
     uint8_t piece = game->board[origin] & 0b00111111; /* without color */ 
@@ -21,44 +21,62 @@ bool is_legal(const game_t *game, size_t origin, size_t dest, bool *enpassant, b
         y2 = 7 - y2;
     }
 
+    LegalInfo legal = {
+        .legal = false,
+        .enpassant = false,
+        .firstmove = false,
+    };
+
+    if (!!(game->board[dest] & WHITE) == is_white && game->board[dest] != 0) {
+        return legal;
+    }
+
     switch (piece) 
     {
     case PAWN: {
         bool one_ahead = x1 == x2 && y1 + 1 == y2 && game->board[dest] == 0;  
         bool two_ahead = y1 == 1 && x1 == x2 && y1 + 2 == y2 && game->board[dest] == 0;
         bool take = abs(x1 - x2) == 1 && y1 + 1 == y2 && game->board[dest] != 0;
-        bool en_passant = game->en_passantable == dest + (is_white ? BOARD_N : -BOARD_N);
-        *firstmove = two_ahead;
-        *enpassant = en_passant;
-        return one_ahead || two_ahead || take || en_passant;
+        bool en_passant = game->en_passantable == dest + (is_white ? BOARD_N : -BOARD_N)
+                          && abs(x1 - x2) == 1 && y1 + 1 == y2;
+        legal.firstmove = two_ahead;
+        legal.enpassant = en_passant;
+        legal.legal = one_ahead || two_ahead || take || en_passant;
+        break;
     }
     case KNIGHT: {
-        bool L = false;
-        return L;
+        bool vertL = abs(x1 - x2) == 1 && abs(y1 - y2) == 2;
+        bool horzL = abs(x1 - x2) == 2 && abs(y1 - y2) == 1;
+        legal.legal = vertL || horzL;
+        break;
     }
     case BISHOP: {
         bool diagonal = false;
-        return diagonal;
+        legal.legal = diagonal;
+        break;
     }
     case ROOK: {
         bool horizontal = false;
         bool vertical = false;
-        return horizontal || vertical;
+        legal.legal = horizontal || vertical;
+        break;
     }
     case QUEEN: {
         bool horizontal = false;
         bool vertical = false;
         bool diagonal = false;
-        return horizontal || vertical || diagonal;
+        legal.legal = horizontal || vertical || diagonal;
+        break;
     }
     case KING: {
         bool one = false;
-        return one;
+        legal.legal = one;
+        break;
     }
     default: {}
     }
 
-    return true;
+    return legal;
 }
 
 void clicked_on_square(game_t *game, int x, int y)
@@ -77,23 +95,17 @@ void clicked_on_square(game_t *game, int x, int y)
         game->selected = NONE_SELECTED;
         return;
     }
-
-    if ((game->board[game->selected] & WHITE) == is_white && 
-        game->board[pos] != 0) {
-        game->selected = NONE_SELECTED;
-        return;
-    }
     
-    bool enpassant, firstmove;
+    LegalInfo legal = is_legal(game, game->selected, pos);
 
-    if (!is_legal(game, game->selected, pos, &enpassant, &firstmove)) {
+    if (!legal.legal) {
         game->selected = NONE_SELECTED;
         return;
     }
 
-    if (firstmove) game->en_passantable = pos;
+    if (legal.firstmove) game->en_passantable = pos;
 
-    if (enpassant) {
+    if (legal.enpassant) {
         game->board[pos] = game->board[game->selected];
         game->board[game->en_passantable] = NO_PIECE;
         game->board[game->selected] = NO_PIECE;

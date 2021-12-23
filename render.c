@@ -3,10 +3,11 @@
 
 #include "game.h"
 #include "render.h"
+#include "logic.h"
 
 #define NANOSVG_IMPLEMENTATION
-#include "nanosvg.h"
 #define NANOSVGRAST_IMPLEMENTATION
+#include "nanosvg.h"
 #include "nanosvgrast.h"
 
 PieceTexture pawn_texture;
@@ -22,16 +23,15 @@ SDL_Texture* svgto_sdltexture(SDL_Renderer *renderer, char* filename)
     NSVGimage *image = NULL;
 	NSVGrasterizer *rast = NULL;
     unsigned char* img = NULL;
-    int w, h;
 
-    image = nsvgParseFromFile(filename, "px", SCREEN_WIDTH/2);
+    image = nsvgParseFromFile(filename, "px", SCREEN_SIZE/2);
     if (image == NULL) {
 		fprintf(stderr, "Could not open SVG image.\n");
 		exit(1);
 	}
 
-    w = SCREEN_WIDTH;
-	h = SCREEN_HEIGHT;
+    int w = SCREEN_SIZE;
+	int h = SCREEN_SIZE;
 
 	rast = nsvgCreateRasterizer();
 	if (rast == NULL) {
@@ -93,24 +93,25 @@ void render_board(SDL_Renderer *renderer, const game_t *game)
     for (Uint32 y = 0; y < BOARD_N; ++y) {
         for (Uint32 x = 0; x < BOARD_N; ++x) {
             SDL_Rect rect = {
-                .x = x * (SCREEN_WIDTH/8),
-                .y = y * (SCREEN_HEIGHT/8),
-                .w = SCREEN_WIDTH/8,
-                .h = SCREEN_HEIGHT/8,
+                .x = x * CELL_SIZE,
+                .y = y * CELL_SIZE,
+                .w = CELL_SIZE,
+                .h = CELL_SIZE,
             };
 
-            if (y * BOARD_N + x == game->selected) {
+            LegalInfo legal = is_legal(game, game->selected, y * BOARD_N + x);
+
+            if (legal.legal) {
                 SDL_SetRenderDrawColor(renderer, 
-                                (SELECTED_SQUARE_COLOR & 0xff000000) >> 24,
-                                (SELECTED_SQUARE_COLOR & 0xff0000) >> 16,
-                                (SELECTED_SQUARE_COLOR & 0xff00) >> 8,
-                                SELECTED_SQUARE_COLOR & 0xff);
+                    (LEGAL_SQUARE_COLOR & 0xff000000) >> 24,
+                    (LEGAL_SQUARE_COLOR & 0xff0000) >> 16,
+                    (LEGAL_SQUARE_COLOR & 0xff00) >> 8,
+                    LEGAL_SQUARE_COLOR & 0xff);
                 SDL_RenderFillRect(renderer, &rect);
                 color = (color == WHITE_SQUARE_COLOR) ? BLACK_SQUARE_COLOR : WHITE_SQUARE_COLOR;
                 continue;
             }
-            
-
+        
             SDL_SetRenderDrawColor(renderer, 
                                 (color & 0xff000000) >> 24,
                                 (color & 0xff0000) >> 16,
@@ -123,6 +124,28 @@ void render_board(SDL_Renderer *renderer, const game_t *game)
         }
         color = (color == WHITE_SQUARE_COLOR) ? BLACK_SQUARE_COLOR : WHITE_SQUARE_COLOR;
     }
+
+    if (game->selected == NONE_SELECTED) 
+        return;
+
+    int x, y;
+    x = game->selected % BOARD_N;
+    y = game->selected / BOARD_N;
+    SDL_Rect rect = {
+        .y = y * CELL_SIZE,
+        .x = x * CELL_SIZE,
+        .w = CELL_SIZE,
+        .h = CELL_SIZE,
+    };
+
+    SDL_SetRenderDrawColor(renderer, 
+                    (SELECTED_SQUARE_COLOR & 0xff000000) >> 24,
+                    (SELECTED_SQUARE_COLOR & 0xff0000) >> 16,
+                    (SELECTED_SQUARE_COLOR & 0xff00) >> 8,
+                    SELECTED_SQUARE_COLOR & 0xff);
+    SDL_RenderFillRect(renderer, &rect);
+
+
 }
 
 void render_piece(uint8_t piece, int x, int y, SDL_Renderer *renderer)
@@ -132,15 +155,17 @@ void render_piece(uint8_t piece, int x, int y, SDL_Renderer *renderer)
     SDL_Rect rect = {
         .y = y*CELL_SIZE, 
         .x = x*CELL_SIZE,
-        .h = SCREEN_HEIGHT,
-        .w = SCREEN_WIDTH,
+        .h = SCREEN_SIZE,
+        .w = SCREEN_SIZE,
     };
 
     uint8_t is_white = piece & WHITE;
     piece &= 0b00111111; /* cut off color to make switch easier */
 
+
+
     PieceTexture tex_struct = {NULL};
-    switch (piece)
+    switch (piece) /* TODO: #3 lookup table? */
     {
         case PAWN:
             tex_struct = pawn_texture;
