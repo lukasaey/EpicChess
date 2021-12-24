@@ -82,8 +82,7 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
 void clicked_on_square(game_t *game, int x, int y)
 {
     unsigned int pos = y * BOARD_N + x;
-    bool is_white = game->board[pos] & WHITE;
-
+    
     if (game->selected == NONE_SELECTED) {
         if (game->board[pos] != 0) {
             game->selected = pos; 

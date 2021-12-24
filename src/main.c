@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 
 #include "game.h"
@@ -20,7 +21,7 @@ const uint8_t DEFAULT_BOARD[64] =
     WHITE | ROOK, WHITE | KNIGHT, WHITE | BISHOP, WHITE | QUEEN, WHITE | KING, WHITE | BISHOP, WHITE | KNIGHT, WHITE | ROOK,
 };
 
-int main(int argc, char *argv[])
+int main(void)
 {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "Error, could not init SDL: %s\n", SDL_GetError());

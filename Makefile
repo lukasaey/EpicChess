@@ -1,18 +1,20 @@
 CC=gcc
 DEBUGARGS=-g -Wall -Wextra -Wshadow -lmingw32 -lSDL2main -lSDL2
 RELEASEARGS=-O2 -mwindows -lmingw32 -lSDL2main -lSDL2
-# to get rid of console: -mwindows
+
+_OBJS = main.o logic.o render.o
+OBJS = $(patsubst %,obj/%,$(_OBJS))
 
 all: debug
 
-debug: main.o logic.o render.o
-	$(CC) main.o logic.o render.o -o main $(DEBUGARGS) 
+debug: $(OBJS)
+	$(CC) $(OBJS) -o ./bin/main $(DEBUGARGS) 
 
-release: main.o logic.o render.o
-	$(CC) main.o logic.o render.o -omain $(RELEASEARGS)
+release: $(OBJS)
+	$(CC) $(OBJS) -o ./bin/main $(RELEASEARGS)
 
-%.o: %.c
-	$(CC) -c $^ $(DEBUGARGS) 
+obj/%.o: src/%.c
+	$(CC) -c $^ -o $@ $ $(DEBUGARGS) 
 
 clean:
-	rm main.exe *.o
+	rm ./bin/main.exe ./obj/*
