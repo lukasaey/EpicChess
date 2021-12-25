@@ -30,14 +30,14 @@ SDL_Texture* svgto_sdltexture(SDL_Renderer *renderer, char* filename)
 		exit(1);
 	}
 
-    int w = SCREEN_SIZE;
-	int h = SCREEN_SIZE;
-
 	rast = nsvgCreateRasterizer();
 	if (rast == NULL) {
 		fprintf(stderr, "Could not init rasterizer.\n");
 		exit(1);
 	}
+
+    int w = SCREEN_SIZE;
+	int h = SCREEN_SIZE;
 
 	img = malloc(w*h*4);
 	if (img == NULL) {
@@ -86,68 +86,6 @@ void preload_textures(SDL_Renderer *renderer)
     king_texture.black = svgto_sdltexture(renderer, B_KING_FILEPATH);
 }
 
-void render_board(SDL_Renderer *renderer, const game_t *game)
-{
-    uint32_t color = WHITE_SQUARE_COLOR;
-
-    for (Uint32 y = 0; y < BOARD_N; ++y) {
-        for (Uint32 x = 0; x < BOARD_N; ++x) {
-            SDL_Rect rect = {
-                .x = x * CELL_SIZE,
-                .y = y * CELL_SIZE,
-                .w = CELL_SIZE,
-                .h = CELL_SIZE,
-            };
-
-            LegalInfo legal = is_legal(game, game->selected, y * BOARD_N + x);
-
-            if (legal.legal) {
-                SDL_SetRenderDrawColor(renderer, 
-                    (LEGAL_SQUARE_COLOR & 0xff000000) >> 24,
-                    (LEGAL_SQUARE_COLOR & 0xff0000) >> 16,
-                    (LEGAL_SQUARE_COLOR & 0xff00) >> 8,
-                    LEGAL_SQUARE_COLOR & 0xff);
-                SDL_RenderFillRect(renderer, &rect);
-                color = (color == WHITE_SQUARE_COLOR) ? BLACK_SQUARE_COLOR : WHITE_SQUARE_COLOR;
-                continue;
-            }
-        
-            SDL_SetRenderDrawColor(renderer, 
-                                (color & 0xff000000) >> 24,
-                                (color & 0xff0000) >> 16,
-                                (color & 0xff00) >> 8,
-                                color & 0xff);
-
-            SDL_RenderFillRect(renderer, &rect);
-    
-            color = (color == WHITE_SQUARE_COLOR) ? BLACK_SQUARE_COLOR : WHITE_SQUARE_COLOR;
-        }
-        color = (color == WHITE_SQUARE_COLOR) ? BLACK_SQUARE_COLOR : WHITE_SQUARE_COLOR;
-    }
-
-    if (game->selected == NONE_SELECTED) 
-        return;
-
-    int x, y;
-    x = game->selected % BOARD_N;
-    y = game->selected / BOARD_N;
-    SDL_Rect rect = {
-        .y = y * CELL_SIZE,
-        .x = x * CELL_SIZE,
-        .w = CELL_SIZE,
-        .h = CELL_SIZE,
-    };
-
-    SDL_SetRenderDrawColor(renderer, 
-                    (SELECTED_SQUARE_COLOR & 0xff000000) >> 24,
-                    (SELECTED_SQUARE_COLOR & 0xff0000) >> 16,
-                    (SELECTED_SQUARE_COLOR & 0xff00) >> 8,
-                    SELECTED_SQUARE_COLOR & 0xff);
-    SDL_RenderFillRect(renderer, &rect);
-
-
-}
-
 void render_piece(uint8_t piece, int x, int y, SDL_Renderer *renderer)
 {
     if (!piece) return;
@@ -159,9 +97,8 @@ void render_piece(uint8_t piece, int x, int y, SDL_Renderer *renderer)
         .w = SCREEN_SIZE,
     };
 
-    uint8_t is_white = piece & WHITE;
+    bool is_white = piece & WHITE;
     piece &= 0b00111111; /* cut off color to make switch easier */
-
 
 
     PieceTexture tex_struct = {NULL};
@@ -187,17 +124,48 @@ void render_piece(uint8_t piece, int x, int y, SDL_Renderer *renderer)
             break;
     }
 
-    SDL_Texture *tex = (!!is_white) ? tex_struct.white : tex_struct.black;
+    SDL_Texture *tex = (is_white) ? tex_struct.white : tex_struct.black;
     SDL_RenderCopy(renderer, tex, NULL, &rect); 
 }
 
 void render_game(const game_t *game, SDL_Renderer *renderer) 
 {
-    render_board(renderer, game);
+    uint32_t color = WHITE_SQUARE_COLOR;
 
-    for (int y = 0; y < BOARD_N; ++y) {
-        for (int x = 0; x < BOARD_N; ++x) {
-            render_piece(game->board[y * BOARD_N + x], x, y, renderer);
+    for (Uint32 y = 0; y < BOARD_N; ++y) {
+        for (Uint32 x = 0; x < BOARD_N; ++x) {
+            SDL_Rect rect = {
+                .x = x * CELL_SIZE,
+                .y = y * CELL_SIZE,
+                .w = CELL_SIZE,
+                .h = CELL_SIZE,
+            };
+
+            uint32_t clr;
+            unsigned int pos = y * BOARD_N + x;
+
+            if (game->selected == pos) {
+                clr = SELECTED_SQUARE_COLOR;
+            } else if (is_legal(game, game->selected, pos).legal) {
+                clr = LEGAL_SQUARE_COLOR;
+            } else {
+                clr = color;
+            }
+            
+            SDL_SetRenderDrawColor(renderer,
+                (clr & 0xff000000) >> 24,
+                (clr & 0xff0000) >> 16,
+                (clr & 0xff00) >> 8,
+                clr & 0xff
+            );
+            SDL_RenderFillRect(renderer, &rect);
+            
+            if (game->board[pos] != 0) {
+                render_piece(game->board[pos], x, y, renderer);
+            }
+
+            color = (color == WHITE_SQUARE_COLOR) ? BLACK_SQUARE_COLOR : WHITE_SQUARE_COLOR;
         }
+        color = (color == WHITE_SQUARE_COLOR) ? BLACK_SQUARE_COLOR : WHITE_SQUARE_COLOR;
     }
 }

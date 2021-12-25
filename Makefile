@@ -1,4 +1,3 @@
-CC=gcc
 DEBUGARGS=-g -Wall -Wextra -Wshadow -lmingw32 -lSDL2main -lSDL2
 RELEASEARGS=-O2 -mwindows -lmingw32 -lSDL2main -lSDL2
 

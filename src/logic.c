@@ -113,8 +113,6 @@ void clicked_on_square(game_t *game, int x, int y)
         return;
     }
 
-    printf("x: %lld, y: %lld", game->en_passantable % 8, game->en_passantable % 8);
-
     game->board[pos] = game->board[game->selected];
     /* TODO: #1 make this a bit smarter */
     game->board[game->selected] = NO_PIECE;
