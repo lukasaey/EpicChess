@@ -5,8 +5,65 @@
 #include <math.h>
 #include <stdio.h>
 
+
+bool is_line_empty
+(const game_t *game, int32_t x1, int32_t y1, int32_t x2, int32_t y2)
+{
+    assert(x1 <= BOARD_N && x2 <= BOARD_N && y1 <= BOARD_N && y2 <= BOARD_N);
+
+    int32_t x = x1;
+    int32_t y = y1;
+
+    int32_t *dynamic = (x1 == x2) ? &y : &x;
+    int32_t limit = (x1 == x2) ? y2 : x2;
+    int32_t step = *dynamic < limit ? 1 : -1;
+
+    while (*dynamic != limit)
+    {
+        int32_t pos = y * BOARD_N + x;
+        if (game->board[pos] != NO_PIECE &&
+                pos != y2 * BOARD_N + x2 &&
+                pos != y1 * BOARD_N + x1) 
+            return false;
+        *dynamic += step;
+    }
+
+    return true;
+}
+
+bool is_diag_empty /* TODO: improvements, like in is_line_empty */
+(const game_t *game, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2)
+{
+    assert(x1 <= BOARD_N && x2 <= BOARD_N && y1 <= BOARD_N && y2 <= BOARD_N);
+
+    uint32_t min_x = min(x1, x2);
+    uint32_t max_x = max(x1, x2); 
+    uint32_t y = (min_x == x1) ? y1 : y2;
+    uint32_t noty = (min_x != x1) ? y1 : y2;
+
+    /* assuming that x1 - x2 == y1 - y2 */
+    while (min_x <= max_x)
+    {
+        size_t pos = y * BOARD_N + min_x;
+        uint8_t piece = game->board[pos];
+        if (piece != NO_PIECE && pos != y1 * BOARD_N + x1 && pos != y2 * BOARD_N + x2)
+            return false;
+        min_x++; 
+        if (y > noty) y--;
+        else y++;
+    }
+
+    return true;
+}
+
 LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
 {
+    LegalInfo legal = {
+        .legal = false,
+        .enpassant = false,
+        .firstmove = false,
+    };
+
     bool is_white = game->board[origin] & WHITE;
     uint8_t piece = game->board[origin] & 0b00111111; /* without color */ 
 
@@ -21,12 +78,6 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
         y2 = 7 - y2;
     }
 
-    LegalInfo legal = {
-        .legal = false,
-        .enpassant = false,
-        .firstmove = false,
-    };
-
     if (!!(game->board[dest] & WHITE) == is_white && game->board[dest] != 0) {
         return legal;
     }
@@ -34,11 +85,13 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
     switch (piece) 
     {
     case PAWN: {
-        bool one_ahead = x1 == x2 && y1 + 1 == y2 && game->board[dest] == 0;  
-        bool two_ahead = y1 == 1 && x1 == x2 && y1 + 2 == y2 && game->board[dest] == 0;
-        bool take = abs(x1 - x2) == 1 && y1 + 1 == y2 && game->board[dest] != 0;
+        bool one_ahead = x1 == x2 && y1 + 1 == y2 && game->board[dest] == NO_PIECE;  
+        bool two_ahead = y1 == 1 && x1 == x2 && y1 + 2 == y2 
+            && game->board[dest] == NO_PIECE 
+            && game->board[dest+ (is_white ? BOARD_N : -BOARD_N)] == NO_PIECE;
+        bool take = abs(x1 - x2) == 1 && y1 + 1 == y2 && game->board[dest] != NO_PIECE;
         bool en_passant = game->en_passantable == dest + (is_white ? BOARD_N : -BOARD_N)
-                          && abs(x1 - x2) == 1 && y1 + 1 == y2;
+            && abs(x1 - x2) == 1 && y1 + 1 == y2;
         legal.firstmove = two_ahead;
         legal.enpassant = en_passant;
         legal.legal = one_ahead || two_ahead || take || en_passant;
@@ -51,26 +104,26 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
         break;
     }
     case BISHOP: {
-        bool diagonal = false;
-        legal.legal = diagonal;
+        /* Ys are calculated cuz they were normalized earlier on */
+        bool diagonal = is_diag_empty(game, x1, origin / BOARD_N, x2, dest / BOARD_N);
+        legal.legal = diagonal && abs(x1 - x2) == abs(y1 - y2);
         break;
     }
     case ROOK: {
-        bool horizontal = false;
-        bool vertical = false;
-        legal.legal = horizontal || vertical;
+        legal.legal = (x1 == x2 || y1 == y2) && is_line_empty(game, x1, origin / BOARD_N, x2, dest / BOARD_N);
         break;
     }
     case QUEEN: {
-        bool horizontal = false;
-        bool vertical = false;
-        bool diagonal = false;
-        legal.legal = horizontal || vertical || diagonal;
+        legal.legal = 
+             (is_line_empty(game, x1, origin / BOARD_N, x2, dest / BOARD_N) 
+                && (x1 == x2 || y1 == y2)) 
+            || (is_diag_empty(game, x1, origin / BOARD_N, x2, dest / BOARD_N) 
+                && abs(x1 - x2) == abs(y1 - y2));
         break;
     }
     case KING: {
-        bool one = false;
-        legal.legal = one;
+        legal.legal = (abs(x1 - x2) == 1 || x1 - x2 == 0) 
+            && (abs(y1 - y2) == 1 || y1 - y2 == 0);
         break;
     }
     default: {}

@@ -132,8 +132,8 @@ void render_game(const game_t *game, SDL_Renderer *renderer)
 {
     uint32_t color = WHITE_SQUARE_COLOR;
 
-    for (Uint32 y = 0; y < BOARD_N; ++y) {
-        for (Uint32 x = 0; x < BOARD_N; ++x) {
+    for (size_t y = 0; y < BOARD_N; ++y) {
+        for (size_t x = 0; x < BOARD_N; ++x) {
             SDL_Rect rect = {
                 .x = x * CELL_SIZE,
                 .y = y * CELL_SIZE,
@@ -142,7 +142,7 @@ void render_game(const game_t *game, SDL_Renderer *renderer)
             };
 
             uint32_t clr;
-            unsigned int pos = y * BOARD_N + x;
+            size_t pos = y * BOARD_N + x;
 
             if (game->selected == pos) {
                 clr = SELECTED_SQUARE_COLOR;
