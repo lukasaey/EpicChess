@@ -10,6 +10,9 @@ typedef struct {
     bool legal;
     bool firstmove;
     bool enpassant;
+    bool castle;
+    uint8_t white_castle;
+    uint8_t black_castle;
 } LegalInfo;
 
 void clicked_on_square(game_t *game, int x, int y);

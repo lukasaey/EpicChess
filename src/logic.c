@@ -62,6 +62,9 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
         .legal = false,
         .enpassant = false,
         .firstmove = false,
+        .castle = false,
+        .white_castle = KING_CASTLE | QUEEN_CASTLE,
+        .black_castle = KING_CASTLE | QUEEN_CASTLE,
     };
 
     bool is_white = game->board[origin] & WHITE;
@@ -78,7 +81,8 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
         y2 = 7 - y2;
     }
 
-    if (!!(game->board[dest] & WHITE) == is_white && game->board[dest] != 0) {
+    if (piece != KING && !!(game->board[dest] & WHITE) == is_white 
+            && game->board[dest] != 0) {
         return legal;
     }
 
@@ -111,6 +115,14 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
     }
     case ROOK: {
         legal.legal = (x1 == x2 || y1 == y2) && is_line_empty(game, x1, origin / BOARD_N, x2, dest / BOARD_N);
+
+        if (y1 == 0) {
+            uint8_t *castle = is_white ? &legal.white_castle : &legal.black_castle;
+            /* setting king or queen castle bit to 0 */
+            if (x1 == 7) *castle &= ~KING_CASTLE; 
+            else if (x1 == 0) *castle &= ~QUEEN_CASTLE; 
+        } 
+
         break;
     }
     case QUEEN: {
@@ -122,8 +134,37 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
         break;
     }
     case KING: {
-        legal.legal = (abs(x1 - x2) == 1 || x1 - x2 == 0) 
-            && (abs(y1 - y2) == 1 || y1 - y2 == 0);
+        /* castling */
+        //printf("w: %d, b: %d\n", game->white_castle, game->black_castle);
+        if (y2 == 0) {
+            uint8_t *castle = is_white ? &game->white_castle : &game->black_castle;
+            if (x2 == 0) {
+                bool clear = is_line_empty(game, x1, origin / BOARD_N, x2, dest / BOARD_N);
+                bool can = *castle & QUEEN_CASTLE;
+                legal.legal = clear && can;
+                legal.castle = true;
+                break;
+            } 
+            else if (x2 == 7) {
+                bool clear = is_line_empty(game, x1, origin / BOARD_N, x2, dest / BOARD_N);
+                bool can = *castle & KING_CASTLE;
+                legal.legal = clear && can;
+                legal.castle = true;
+                break;
+            }
+        }
+
+        if (!!(game->board[dest] & WHITE) == is_white && game->board[dest] != 0) {
+            legal.legal = false;
+            break;
+        }
+ 
+        legal.legal = abs(x1 - x2) <= 1 && abs(y1 - y2) <= 1;
+
+        if (legal.legal) {
+            if (is_white) legal.white_castle = NO_CASTLING;
+            else legal.black_castle = NO_CASTLING;
+        } 
         break;
     }
     default: {}
@@ -149,7 +190,9 @@ void clicked_on_square(game_t *game, int x, int y)
     }
     
     LegalInfo legal = is_legal(game, game->selected, pos);
-
+    game->black_castle &= legal.black_castle;
+    game->white_castle &= legal.white_castle;
+   
     if (!legal.legal) {
         game->selected = NONE_SELECTED;
         return;
@@ -166,8 +209,25 @@ void clicked_on_square(game_t *game, int x, int y)
         return;
     }
 
+    if (legal.castle) {
+        bool kingside = x == 7;
+        if (kingside) {
+            game->board[pos-2] = game->board[pos];
+            game->board[pos] = NO_PIECE;
+            game->board[pos-1] = game->board[game->selected];
+            game->board[game->selected] = NO_PIECE;
+            game->selected = NONE_SELECTED;
+            return;
+        } else {
+            game->board[pos+2] = game->board[pos];
+            game->board[pos] = NO_PIECE;
+            game->board[pos+1] = game->board[game->selected];
+            game->board[game->selected] = NO_PIECE;
+            game->selected = NONE_SELECTED;
+        }
+    }
+
     game->board[pos] = game->board[game->selected];
-    /* TODO: #1 make this a bit smarter */
     game->board[game->selected] = NO_PIECE;
     game->selected = NONE_SELECTED;
 }

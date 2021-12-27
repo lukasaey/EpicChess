@@ -52,6 +52,8 @@ int main(int argc, char *argv[])
         .player = WHITE_PLAYER,
         .selected = NONE_SELECTED,
         .en_passantable = NONE_SELECTED,
+        .black_castle = KING_CASTLE | QUEEN_CASTLE,
+        .white_castle = KING_CASTLE | QUEEN_CASTLE,
     };
 
     memcpy(game.board, DEFAULT_BOARD, 64);

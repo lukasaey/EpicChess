@@ -32,6 +32,10 @@
 #define BLACK  0b01000000
 #define WHITE  0b10000000
 
+#define NO_CASTLING  0
+#define KING_CASTLE  0b01
+#define QUEEN_CASTLE 0b10
+
 #define NONE_SELECTED ((BOARD_N*BOARD_N)+1)
 
 /* RGBA */
@@ -50,6 +54,8 @@ typedef struct {
     player_t player;
     size_t selected;
     size_t en_passantable;
+    uint8_t white_castle;
+    uint8_t black_castle;
 } game_t;
 
 #endif /* GAME_H */
