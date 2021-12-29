@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <stdbool.h>
+
+#define FPS 60
+#define DT (1/FPS)
 
 #define SCREEN_SIZE 800
 #define BOARD_N 8
@@ -47,15 +51,18 @@
 typedef enum {
     WHITE_PLAYER,
     BLACK_PLAYER,
-} player_t;
+} EPlayer;
 
 typedef struct {
     uint8_t board[BOARD_N * BOARD_N];
-    player_t player;
+    EPlayer player;
     size_t selected;
-    size_t en_passantable;
+    size_t en_passantable; /* keeping track of an enpassantable pawn, if it exists */
     uint8_t white_castle;
     uint8_t black_castle;
+    int white_king_pos; /* just to make check checking easier */
+    int black_king_pos;
+    bool in_check;
 } game_t;
 
 #endif /* GAME_H */

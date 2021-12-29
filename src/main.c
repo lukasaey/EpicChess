@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <time.h>
 
 #include <SDL2/SDL.h>
 
@@ -54,6 +56,8 @@ int main(int argc, char *argv[])
         .en_passantable = NONE_SELECTED,
         .black_castle = KING_CASTLE | QUEEN_CASTLE,
         .white_castle = KING_CASTLE | QUEEN_CASTLE,
+        .black_king_pos = 4,
+        .white_king_pos = 60,
     };
 
     memcpy(game.board, DEFAULT_BOARD, 64);
@@ -62,7 +66,9 @@ int main(int argc, char *argv[])
     
     SDL_Event e;
     int quit = 0;
+    clock_t t;
     while (!quit) {
+        t = clock();
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
             case SDL_QUIT:
@@ -80,6 +86,8 @@ int main(int argc, char *argv[])
         SDL_RenderClear(renderer);
         render_game(&game, renderer);
         SDL_RenderPresent(renderer);
+        unsigned int elapsed = (clock() - t) / CLOCKS_PER_SEC;
+        if (elapsed < DT) sleep(elapsed);
     }
 
     SDL_DestroyWindow(window);

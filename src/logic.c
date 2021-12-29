@@ -4,19 +4,17 @@
 #include <stdbool.h>
 #include <math.h>
 #include <stdio.h>
-
+#include <string.h>
 
 bool is_line_empty
 (const game_t *game, int32_t x1, int32_t y1, int32_t x2, int32_t y2)
 {
     assert(x1 <= BOARD_N && x2 <= BOARD_N && y1 <= BOARD_N && y2 <= BOARD_N);
 
-    int32_t x = x1;
-    int32_t y = y1;
-
-    int32_t *dynamic = (x1 == x2) ? &y : &x;
-    int32_t limit = (x1 == x2) ? y2 : x2;
-    int32_t step = *dynamic < limit ? 1 : -1;
+    int x = x1, y = y1;
+    int *dynamic = (x1 == x2) ? &y : &x;
+    int limit = (x1 == x2) ? y2 : x2;
+    int step = *dynamic < limit ? 1 : -1;
 
     while (*dynamic != limit)
     {
@@ -56,6 +54,87 @@ bool is_diag_empty /* TODO: improvements, like in is_line_empty */
     return true;
 }
 
+int move_piece(game_t *game, LegalInfo legal, int x, int y)
+{
+    int pos = y * BOARD_N + x;
+
+    if (legal.enpassant) {
+        game->board[pos] = game->board[game->selected];
+        game->board[game->en_passantable] = NO_PIECE;
+        game->board[game->selected] = NO_PIECE;
+        game->selected = NONE_SELECTED;
+        game->en_passantable = NONE_SELECTED;
+        return 1;
+    }
+
+    uint8_t piece = game->board[game->selected];
+
+    if (legal.castle) {
+        int sign = (x == 7) ? -1 : 1;
+        game->board[pos+(2*sign)] = game->board[pos];
+        game->board[pos] = NO_PIECE;
+        game->board[pos+sign] = game->board[game->selected];
+        game->board[game->selected] = NO_PIECE;
+        game->selected = NONE_SELECTED;
+
+        int *king_pos = (piece & WHITE) ? &game->white_king_pos : &game->black_king_pos;
+        *king_pos = pos+sign;
+
+        return 1;
+    }
+
+    if (piece & KING) {
+        int *king_pos = (piece & WHITE) ? &game->white_king_pos : &game->black_king_pos;
+        *king_pos = pos;
+    }
+
+    if (legal.firstmove) game->en_passantable = pos;
+
+    game->board[pos] = game->board[game->selected];
+    game->board[game->selected] = NO_PIECE;
+    game->selected = NONE_SELECTED;
+
+    return 0;
+}
+
+bool* get_legal_moves(const game_t *game, int pos)
+{
+    static bool moves[BOARD_N*BOARD_N];
+
+    memset(moves, false, BOARD_N*BOARD_N);
+    
+    for (int i = 0; i < BOARD_N*BOARD_N; ++i) 
+    {
+        if (is_legal(game, pos, i).legal)
+            moves[i] = true;
+    }
+
+    return moves;
+}
+
+bool in_check(const game_t *game, LegalInfo legal, size_t origin, size_t dest)
+{   
+    int x = dest % BOARD_N, y = dest / BOARD_N;
+    /* using a copy of game */
+    game_t mygame = *game;
+    
+    if (move_piece(&mygame, legal, x, y)) assert(0);
+
+    uint8_t color = mygame.board[dest] & 0b11000000;
+    int king_pos = color == WHITE ? mygame.white_king_pos : mygame.black_king_pos;
+
+    for (int i = 0; i < BOARD_N*BOARD_N; ++i)
+    {
+        bool *legalmoves = get_legal_moves(&mygame, i);
+
+        if (!(mygame.board[i] == color) && legalmoves[king_pos]) {
+            return true;
+        }
+    }    
+
+    return false;
+}
+
 LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
 {
     LegalInfo legal = {
@@ -70,11 +149,10 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
     bool is_white = game->board[origin] & WHITE;
     uint8_t piece = game->board[origin] & 0b00111111; /* without color */ 
 
-    int x1, y1, x2, y2;
-    x1 = origin % BOARD_N;
-    y1 = origin / BOARD_N;
-    x2 = dest % BOARD_N;
-    y2 = dest / BOARD_N;
+    int x1 = origin % BOARD_N;
+    int y1 = origin / BOARD_N;
+    int x2 = dest % BOARD_N;
+    int y2 = dest / BOARD_N;
 
     if (is_white) {
         y1 = 7 - y1;
@@ -108,7 +186,7 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
         break;
     }
     case BISHOP: {
-        /* Ys are calculated cuz they were normalized earlier on */
+        /* Ys are calculated cuz they were changed earlier on */
         bool diagonal = is_diag_empty(game, x1, origin / BOARD_N, x2, dest / BOARD_N);
         legal.legal = diagonal && abs(x1 - x2) == abs(y1 - y2);
         break;
@@ -135,9 +213,8 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
     }
     case KING: {
         /* castling */
-        //printf("w: %d, b: %d\n", game->white_castle, game->black_castle);
         if (y2 == 0) {
-            uint8_t *castle = is_white ? &game->white_castle : &game->black_castle;
+            const uint8_t *castle = is_white ? &game->white_castle : &game->black_castle;
             if (x2 == 0) {
                 bool clear = is_line_empty(game, x1, origin / BOARD_N, x2, dest / BOARD_N);
                 bool can = *castle & QUEEN_CASTLE;
@@ -154,6 +231,7 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
             }
         }
 
+        /* since castling involves clicking on a same color, it's handled here instead */
         if (!!(game->board[dest] & WHITE) == is_white && game->board[dest] != 0) {
             legal.legal = false;
             break;
@@ -161,6 +239,7 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
  
         legal.legal = abs(x1 - x2) <= 1 && abs(y1 - y2) <= 1;
 
+        /* moving the king automatically disqualifies castling */
         if (legal.legal) {
             if (is_white) legal.white_castle = NO_CASTLING;
             else legal.black_castle = NO_CASTLING;
@@ -173,7 +252,7 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
     return legal;
 }
 
-void clicked_on_square(game_t *game, int x, int y)
+int clicked_on_square(game_t *game, int x, int y)
 {
     unsigned int pos = y * BOARD_N + x;
     
@@ -181,53 +260,32 @@ void clicked_on_square(game_t *game, int x, int y)
         if (game->board[pos] != 0) {
             game->selected = pos; 
         }
-        return;
+        return 1;
     }
 
     if (pos == game->selected) {
         game->selected = NONE_SELECTED;
-        return;
+        return 1;
     }
     
     LegalInfo legal = is_legal(game, game->selected, pos);
+    
+    if (!legal.legal) {
+        game->selected = NONE_SELECTED;
+        return 1;
+    }
+
     game->black_castle &= legal.black_castle;
     game->white_castle &= legal.white_castle;
    
-    if (!legal.legal) {
+    /* a move that results in or keeps you in check is not allowed */
+    if (in_check(game, legal, game->selected, pos)) {
         game->selected = NONE_SELECTED;
-        return;
+        return 1;
     }
 
-    if (legal.firstmove) game->en_passantable = pos;
 
-    if (legal.enpassant) {
-        game->board[pos] = game->board[game->selected];
-        game->board[game->en_passantable] = NO_PIECE;
-        game->board[game->selected] = NO_PIECE;
-        game->selected = NONE_SELECTED;
-        game->en_passantable = NONE_SELECTED;
-        return;
-    }
+    move_piece(game, legal, x, y);
 
-    if (legal.castle) {
-        bool kingside = x == 7;
-        if (kingside) {
-            game->board[pos-2] = game->board[pos];
-            game->board[pos] = NO_PIECE;
-            game->board[pos-1] = game->board[game->selected];
-            game->board[game->selected] = NO_PIECE;
-            game->selected = NONE_SELECTED;
-            return;
-        } else {
-            game->board[pos+2] = game->board[pos];
-            game->board[pos] = NO_PIECE;
-            game->board[pos+1] = game->board[game->selected];
-            game->board[game->selected] = NO_PIECE;
-            game->selected = NONE_SELECTED;
-        }
-    }
-
-    game->board[pos] = game->board[game->selected];
-    game->board[game->selected] = NO_PIECE;
-    game->selected = NONE_SELECTED;
+    return 0;
 }
