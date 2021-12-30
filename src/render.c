@@ -148,7 +148,7 @@ void render_game(const game_t *game, SDL_Renderer *renderer)
                 clr = SELECTED_SQUARE_COLOR;
             } else {
                 LegalInfo leg = is_legal(game, game->selected, pos);
-                if (leg.legal && !in_check(game, leg, game->selected, pos)) {
+                if (leg.legal && !in_check(game, leg, pos)) {
                     clr = LEGAL_SQUARE_COLOR;
                 } else {
                     clr = color;

@@ -112,7 +112,7 @@ bool* get_legal_moves(const game_t *game, int pos)
     return moves;
 }
 
-bool in_check(const game_t *game, LegalInfo legal, size_t origin, size_t dest)
+bool in_check(const game_t *game, LegalInfo legal, size_t dest)
 {   
     int x = dest % BOARD_N, y = dest / BOARD_N;
     /* using a copy of game */
@@ -279,7 +279,7 @@ int clicked_on_square(game_t *game, int x, int y)
     game->white_castle &= legal.white_castle;
    
     /* a move that results in or keeps you in check is not allowed */
-    if (in_check(game, legal, game->selected, pos)) {
+    if (in_check(game, legal, pos)) {
         game->selected = NONE_SELECTED;
         return 1;
     }
