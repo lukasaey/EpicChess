@@ -54,7 +54,7 @@ bool is_diag_empty /* TODO: improvements, like in is_line_empty */
     return true;
 }
 
-int move_piece(game_t *game, LegalInfo legal, int x, int y)
+void move_piece(game_t *game, LegalInfo legal, int x, int y)
 {
     int pos = y * BOARD_N + x;
 
@@ -64,7 +64,7 @@ int move_piece(game_t *game, LegalInfo legal, int x, int y)
         game->board[game->selected] = NO_PIECE;
         game->selected = NONE_SELECTED;
         game->en_passantable = NONE_SELECTED;
-        return 1;
+        return;
     }
 
     uint8_t piece = game->board[game->selected];
@@ -80,7 +80,7 @@ int move_piece(game_t *game, LegalInfo legal, int x, int y)
         int *king_pos = (piece & WHITE) ? &game->white_king_pos : &game->black_king_pos;
         *king_pos = pos+sign;
 
-        return 1;
+        return;
     }
 
     if (piece & KING) {
@@ -94,7 +94,7 @@ int move_piece(game_t *game, LegalInfo legal, int x, int y)
     game->board[game->selected] = NO_PIECE;
     game->selected = NONE_SELECTED;
 
-    return 0;
+    return;
 }
 
 bool* get_legal_moves(const game_t *game, int pos)
@@ -135,9 +135,24 @@ bool is_check(const game_t *game, LegalInfo legal, size_t dest)
     int x = dest % BOARD_N, y = dest / BOARD_N;
     /* using a copy of game */
     game_t mygame = *game;
-    if (move_piece(&mygame, legal, x, y)) assert(0);
+    move_piece(&mygame, legal, x, y);
 
     return in_check(&mygame);
+}
+
+bool check_mate(const game_t *game)
+{
+    int kingpos = game->player == WHITE_PLAYER ? game->white_king_pos : game->black_king_pos;
+    
+    size_t counter = 0;
+
+    for (int i = 0; i < BOARD_N*BOARD_N; ++i) 
+    {
+        if (is_legal(game, kingpos, i).legal)
+            counter++;
+    }
+
+    return counter == 0 && game->in_check;
 }
 
 LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
@@ -218,7 +233,7 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
     }
     case KING: {
         /* castling */
-        if (y2 == 0) {
+        if (y2 == 0 && !game->in_check) {
             const uint8_t *castle = is_white ? &game->white_castle : &game->black_castle;
             if (x2 == 0) {
                 bool clear = is_line_empty(game, x1, origin / BOARD_N, x2, dest / BOARD_N);
@@ -261,8 +276,6 @@ int clicked_on_square(game_t *game, int x, int y)
 {
     unsigned int pos = y * BOARD_N + x;
     
-    
-
     if (game->selected == NONE_SELECTED) {
         if (game->board[pos] != 0 && ((game->board[pos] & WHITE && game->player == WHITE_PLAYER) || ( game->board[pos] & BLACK && game->player == BLACK_PLAYER))) {
             game->selected = pos; 
@@ -274,7 +287,7 @@ int clicked_on_square(game_t *game, int x, int y)
         game->selected = NONE_SELECTED;
         return 1;
     }
-    
+
     LegalInfo legal = is_legal(game, game->selected, pos);
     
     if (!legal.legal) {
@@ -293,6 +306,11 @@ int clicked_on_square(game_t *game, int x, int y)
 
     move_piece(game, legal, x, y);
     game->player = game->player == WHITE_PLAYER ? BLACK_PLAYER : WHITE_PLAYER;
+    game->in_check = in_check(game);
 
+    if (check_mate(game)) {
+        printf("%s won by checkmate", game->player == WHITE_PLAYER ? "white" : "black");
+        game->state = ENDED;
+    }
     return 0;
 }

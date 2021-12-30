@@ -133,7 +133,7 @@ void render_game(const game_t *game, SDL_Renderer *renderer)
     uint32_t color = WHITE_SQUARE_COLOR; 
     size_t kingpos = INT_MAX;
 
-    if (in_check(game)) {
+    if (game->in_check) {
         kingpos = game->player == WHITE_PLAYER ? game->white_king_pos : game->black_king_pos;
     }
 

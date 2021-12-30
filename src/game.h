@@ -54,16 +54,23 @@ typedef enum {
     BLACK_PLAYER,
 } EPlayer;
 
+typedef enum {
+    EXIT,
+    RUNNING,
+    ENDED,
+} EGameState;
+
 typedef struct {
     uint8_t board[BOARD_N * BOARD_N];
     EPlayer player;
+    EGameState state;
     size_t selected;
     size_t en_passantable; /* keeping track of an enpassantable pawn, if it exists */
     uint8_t white_castle;
     uint8_t black_castle;
     int white_king_pos; /* just to make check checking easier */
     int black_king_pos;
-    bool is_check;
+    bool in_check;
 } game_t;
 
 #endif /* GAME_H */

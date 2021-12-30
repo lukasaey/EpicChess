@@ -52,12 +52,14 @@ int main(int argc, char *argv[])
     game_t game = {
         .board = {0}, 
         .player = WHITE_PLAYER,
+        .state = RUNNING,
         .selected = NONE_SELECTED,
         .en_passantable = NONE_SELECTED,
         .black_castle = KING_CASTLE | QUEEN_CASTLE,
         .white_castle = KING_CASTLE | QUEEN_CASTLE,
         .black_king_pos = 4,
         .white_king_pos = 60,
+        .in_check = false,
     };
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDOPERATION_ADD);
@@ -67,18 +69,18 @@ int main(int argc, char *argv[])
     const int cell_size = SCREEN_SIZE / BOARD_N;
     
     SDL_Event e;
-    int quit = 0;
     clock_t t;
-    while (!quit) {
+    while (game.state != EXIT) {
         t = clock();
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
             case SDL_QUIT:
-                quit = 1;
+                game.state = EXIT;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                clicked_on_square(&game, e.button.x / cell_size,
-                                        e.button.y / cell_size);
+                if (game.state == RUNNING)
+                    clicked_on_square(&game, e.button.x / cell_size,
+                                            e.button.y / cell_size);
                 break;
             default: {}
             }
