@@ -60,6 +60,8 @@ int main(int argc, char *argv[])
         .white_king_pos = 60,
     };
 
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDOPERATION_ADD);
+
     memcpy(game.board, DEFAULT_BOARD, 64);
 
     const int cell_size = SCREEN_SIZE / BOARD_N;
@@ -87,7 +89,7 @@ int main(int argc, char *argv[])
         render_game(&game, renderer);
         SDL_RenderPresent(renderer);
         unsigned int elapsed = (clock() - t) / CLOCKS_PER_SEC;
-        if (elapsed < DT) sleep(elapsed);
+        if (elapsed > DT) sleep(elapsed);
     }
 
     SDL_DestroyWindow(window);

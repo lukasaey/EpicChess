@@ -112,27 +112,32 @@ bool* get_legal_moves(const game_t *game, int pos)
     return moves;
 }
 
-bool in_check(const game_t *game, LegalInfo legal, size_t dest)
-{   
-    int x = dest % BOARD_N, y = dest / BOARD_N;
-    /* using a copy of game */
-    game_t mygame = *game;
-    
-    if (move_piece(&mygame, legal, x, y)) assert(0);
-
-    uint8_t color = mygame.board[dest] & 0b11000000;
-    int king_pos = color == WHITE ? mygame.white_king_pos : mygame.black_king_pos;
+bool in_check(const game_t *game)
+{
+    uint8_t color = game->player == WHITE_PLAYER ? WHITE : BLACK;
+    int king_pos = color == WHITE ? game->white_king_pos : game->black_king_pos;
 
     for (int i = 0; i < BOARD_N*BOARD_N; ++i)
     {
-        bool *legalmoves = get_legal_moves(&mygame, i);
+        bool *legalmoves = get_legal_moves(game, i);
 
-        if (!(mygame.board[i] == color) && legalmoves[king_pos]) {
+        if (game->board[i] != color && legalmoves[king_pos]) {
             return true;
         }
     }    
 
     return false;
+}
+
+/* wrapper for in_check that checks a move instead of the current state */
+bool is_check(const game_t *game, LegalInfo legal, size_t dest)
+{   
+    int x = dest % BOARD_N, y = dest / BOARD_N;
+    /* using a copy of game */
+    game_t mygame = *game;
+    if (move_piece(&mygame, legal, x, y)) assert(0);
+
+    return in_check(&mygame);
 }
 
 LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
@@ -256,8 +261,10 @@ int clicked_on_square(game_t *game, int x, int y)
 {
     unsigned int pos = y * BOARD_N + x;
     
+    
+
     if (game->selected == NONE_SELECTED) {
-        if (game->board[pos] != 0) {
+        if (game->board[pos] != 0 && ((game->board[pos] & WHITE && game->player == WHITE_PLAYER) || ( game->board[pos] & BLACK && game->player == BLACK_PLAYER))) {
             game->selected = pos; 
         }
         return 1;
@@ -279,13 +286,13 @@ int clicked_on_square(game_t *game, int x, int y)
     game->white_castle &= legal.white_castle;
    
     /* a move that results in or keeps you in check is not allowed */
-    if (in_check(game, legal, pos)) {
+    if (is_check(game, legal, pos)) {
         game->selected = NONE_SELECTED;
         return 1;
     }
 
-
     move_piece(game, legal, x, y);
+    game->player = game->player == WHITE_PLAYER ? BLACK_PLAYER : WHITE_PLAYER;
 
     return 0;
 }

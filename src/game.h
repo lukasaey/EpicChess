@@ -46,7 +46,8 @@
 #define WHITE_SQUARE_COLOR 0xefe4d4ff
 #define BLACK_SQUARE_COLOR 0x535353ff
 #define SELECTED_SQUARE_COLOR 0xd61515ff
-#define LEGAL_SQUARE_COLOR 0xed3232ff
+#define LEGAL_SQUARE_COLOR 0xed3232a1 
+#define IN_CHECK_COLOR 0x930eabaf
 
 typedef enum {
     WHITE_PLAYER,
@@ -62,7 +63,7 @@ typedef struct {
     uint8_t black_castle;
     int white_king_pos; /* just to make check checking easier */
     int black_king_pos;
-    bool in_check;
+    bool is_check;
 } game_t;
 
 #endif /* GAME_H */

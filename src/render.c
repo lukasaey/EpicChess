@@ -130,7 +130,12 @@ void render_piece(uint8_t piece, int x, int y, SDL_Renderer *renderer)
 
 void render_game(const game_t *game, SDL_Renderer *renderer) 
 {
-    uint32_t color = WHITE_SQUARE_COLOR;
+    uint32_t color = WHITE_SQUARE_COLOR; 
+    size_t kingpos = INT_MAX;
+
+    if (in_check(game)) {
+        kingpos = game->player == WHITE_PLAYER ? game->white_king_pos : game->black_king_pos;
+    }
 
     for (size_t y = 0; y < BOARD_N; ++y) {
         for (size_t x = 0; x < BOARD_N; ++x) {
@@ -143,12 +148,21 @@ void render_game(const game_t *game, SDL_Renderer *renderer)
 
             uint32_t clr;
             size_t pos = y * BOARD_N + x;
+            SDL_SetRenderDrawColor(renderer,
+                (color & 0xff000000) >> 24,
+                (color & 0xff0000) >> 16,
+                (color & 0xff00) >> 8,
+                color & 0xff
+            );
+            SDL_RenderFillRect(renderer, &rect);
 
-            if (game->selected == pos) {
+            if (game->selected == pos) 
                 clr = SELECTED_SQUARE_COLOR;
-            } else {
+            else if (pos == kingpos)
+                clr = IN_CHECK_COLOR;
+            else {
                 LegalInfo leg = is_legal(game, game->selected, pos);
-                if (leg.legal && !in_check(game, leg, pos)) {
+                if (leg.legal && !is_check(game, leg, pos)) {
                     clr = LEGAL_SQUARE_COLOR;
                 } else {
                     clr = color;
