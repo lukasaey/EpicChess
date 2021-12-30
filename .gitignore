@@ -1,2 +1,2 @@
-obj/*.o
-bin/main.exe
+/obj/*.o
+/bin/main.exe
