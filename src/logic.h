@@ -3,8 +3,7 @@
 
 #include <stdbool.h>
 
-#define min(a, b) (a < b ? a : b)
-#define max(a, b) (a > b ? a : b)
+#include "net.h"
 
 typedef struct {
     bool legal;
@@ -16,9 +15,10 @@ typedef struct {
 } LegalInfo;
 
 int clicked_on_square(game_t *game, int x, int y);
+int send_input(game_t *game, SOCKET sock, int x, int y);
 LegalInfo is_legal(const game_t *game, size_t origin, size_t dest);
+LegalInfo _is_legal(const game_t *game, size_t origin, size_t dest);
 bool is_check(const game_t *game, LegalInfo legal, size_t dest);
 bool in_check(const game_t *game);
-
 
 #endif // LOGIC_H

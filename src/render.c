@@ -160,14 +160,10 @@ void render_game(const game_t *game, SDL_Renderer *renderer)
                 clr = SELECTED_SQUARE_COLOR;
             else if (pos == kingpos)
                 clr = IN_CHECK_COLOR;
-            else {
-                LegalInfo leg = is_legal(game, game->selected, pos);
-                if (leg.legal && !is_check(game, leg, pos)) {
-                    clr = LEGAL_SQUARE_COLOR;
-                } else {
-                    clr = color;
-                }
-            }
+            else if (is_legal(game, game->selected, pos).legal) 
+                clr = LEGAL_SQUARE_COLOR;
+            else 
+                clr = color;
             
             SDL_SetRenderDrawColor(renderer,
                 (clr & 0xff000000) >> 24,

@@ -5,9 +5,6 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#define FPS 60
-#define DT (1/FPS)
-
 #define SCREEN_SIZE 800
 #define BOARD_N 8
 #define CELL_SIZE (SCREEN_SIZE/BOARD_N)
@@ -49,6 +46,34 @@
 #define LEGAL_SQUARE_COLOR 0xed3232a1 
 #define IN_CHECK_COLOR 0x930eabaf
 
+#define DEFAULT_GAME_T \
+{ \
+    .board = { \
+        BLACK | ROOK, BLACK | KNIGHT, BLACK | BISHOP, BLACK | QUEEN, BLACK | KING, BLACK | BISHOP, BLACK | KNIGHT, BLACK | ROOK, \
+        BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, \
+        0,0,0,0,0,0,0,0, \
+        0,0,0,0,0,0,0,0, \
+        0,0,0,0,0,0,0,0, \
+        0,0,0,0,0,0,0,0, \
+        WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, \
+        WHITE | ROOK, WHITE | KNIGHT, WHITE | BISHOP, WHITE | QUEEN, WHITE | KING, WHITE | BISHOP, WHITE | KNIGHT, WHITE | ROOK, \
+    }, \
+    .player = WHITE_PLAYER, \
+    .state = RUNNING, \
+    .selected = NONE_SELECTED, \
+    .en_passantable = NONE_SELECTED, \
+    .black_castle = KING_CASTLE | QUEEN_CASTLE, \
+    .white_castle = KING_CASTLE | QUEEN_CASTLE, \
+    .black_king_pos = 4, \
+    .white_king_pos = 60, \
+    .in_check = false, \
+} \
+
+typedef enum EGameType {
+    OFFLINE_GAME,
+    ONLINE_GAME,
+} EGameType;
+
 typedef enum {
     WHITE_PLAYER,
     BLACK_PLAYER,
@@ -64,10 +89,10 @@ typedef struct {
     uint8_t board[BOARD_N * BOARD_N];
     EPlayer player;
     EGameState state;
-    size_t selected;
-    size_t en_passantable; /* keeping track of an enpassantable pawn, if it exists */
     uint8_t white_castle;
     uint8_t black_castle;
+    unsigned int selected;
+    unsigned int en_passantable; /* keeping track of an enpassantable pawn, if it exists */
     int white_king_pos; /* just to make check checking easier */
     int black_king_pos;
     bool in_check;

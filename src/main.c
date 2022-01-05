@@ -9,18 +9,9 @@
 #include "game.h"
 #include "render.h"
 #include "logic.h"
+#include "net.h"
 
-const uint8_t DEFAULT_BOARD[64] =
-{
-    BLACK | ROOK, BLACK | KNIGHT, BLACK | BISHOP, BLACK | QUEEN, BLACK | KING, BLACK | BISHOP, BLACK | KNIGHT, BLACK | ROOK,
-    BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, BLACK | PAWN, BLACK | PAWN,
-    0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,  
-    WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, WHITE | PAWN, WHITE | PAWN,
-    WHITE | ROOK, WHITE | KNIGHT, WHITE | BISHOP, WHITE | QUEEN, WHITE | KING, WHITE | BISHOP, WHITE | KNIGHT, WHITE | ROOK,
-};
+EGameType type = ONLINE_GAME;
 
 int main(int argc, char *argv[])
 {
@@ -47,40 +38,38 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-
     preload_textures(renderer);
-    game_t game = {
-        .board = {0}, 
-        .player = WHITE_PLAYER,
-        .state = RUNNING,
-        .selected = NONE_SELECTED,
-        .en_passantable = NONE_SELECTED,
-        .black_castle = KING_CASTLE | QUEEN_CASTLE,
-        .white_castle = KING_CASTLE | QUEEN_CASTLE,
-        .black_king_pos = 4,
-        .white_king_pos = 60,
-        .in_check = false,
-    };
+    game_t game = DEFAULT_GAME_T;
+
+    SOCKET sock;
+    if (type == ONLINE_GAME) {
+        sock = init_socket();
+        if (sock == INVALID_SOCKET) 
+            game.state = EXIT;
+    }
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDOPERATION_ADD);
-
-    memcpy(game.board, DEFAULT_BOARD, 64);
 
     const int cell_size = SCREEN_SIZE / BOARD_N;
     
     SDL_Event e;
-    clock_t t;
     while (game.state != EXIT) {
-        t = clock();
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
             case SDL_QUIT:
                 game.state = EXIT;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                if (game.state == RUNNING)
-                    clicked_on_square(&game, e.button.x / cell_size,
-                                            e.button.y / cell_size);
+                if (game.state == RUNNING) {
+                    if (type == OFFLINE_GAME) {
+                        clicked_on_square(&game, e.button.x / cell_size,
+                                e.button.y / cell_size);    
+                    } else {
+                        int code = send_input(&game, sock, e.button.x / cell_size,
+                                e.button.y / cell_size);
+                        if (code) game.state = EXIT;
+                    }
+                }
                 break;
             default: {}
             }
@@ -90,8 +79,15 @@ int main(int argc, char *argv[])
         SDL_RenderClear(renderer);
         render_game(&game, renderer);
         SDL_RenderPresent(renderer);
-        unsigned int elapsed = (clock() - t) / CLOCKS_PER_SEC;
-        if (elapsed > DT) sleep(elapsed);
+    }
+
+    if (type == ONLINE_GAME) {
+        Header head = {
+            .type = EXIT_HEADER,
+        };
+        /* sending just exit header, no error checking */
+        send(sock, (char *)&head, sizeof head, 0);
+        closesocket(sock);
     }
 
     SDL_DestroyWindow(window);

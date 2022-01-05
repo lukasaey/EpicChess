@@ -1,6 +1,15 @@
 {
     "files.associations": {
         "render.h": "c",
-        "logic.h": "c"
+        "logic.h": "c",
+        "*.tcc": "c",
+        "chrono": "c",
+        "string_view": "c",
+        "algorithm": "c",
+        "random": "c",
+        "limits": "c",
+        "numeric": "c",
+        "functional": "c",
+        "net.h": "c"
     }
 }
