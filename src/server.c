@@ -1,3 +1,7 @@
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#include <process.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -25,7 +29,6 @@ void handle_move(game_t *game, GameData data)
 
     LegalInfo legal = is_legal(game, origin, dest);
     if (!legal.legal) {
-        puts("returned");
         return;
     }
 
@@ -62,6 +65,41 @@ void handle_move(game_t *game, GameData data)
     game->board[origin] = NO_PIECE;
 }
 
+unsigned __stdcall handleSocket(void *_sock)
+{
+    SOCKET sock = *((SOCKET*) _sock);
+    Header head;
+    game_t game = DEFAULT_GAME_T;
+
+    int quit = 1;
+    while(quit)
+    {
+        if (receive(sock, &head, sizeof head)) {
+            fprintf(stderr, "Error in receive()\n");
+            break;
+        }
+
+        switch (head.type) 
+        {
+        case GAME_HEADER:
+            GameData data;
+            receive(sock, &data, sizeof data);
+            handle_move(&game, data);
+            game.player = (game.player == WHITE_PLAYER) ? BLACK_PLAYER : WHITE_PLAYER;
+            send(sock, (char*)&game, sizeof game, 0);
+            break;
+        case CHAT_HEADER: {break;}
+        case EXIT_HEADER:
+            quit = 0;
+            break;
+        }
+    }
+
+    closesocket(sock);
+    return 0;
+}
+
+
 int main(void)
 {
     WSADATA wsData;
@@ -88,56 +126,32 @@ int main(void)
     printf("listening on port %d\n", PORT);
     listen(listening, SOMAXCONN);
 
-    struct sockaddr_in client;
-    int clientSize = sizeof(client);
+    bool quit = true;
 
-    SOCKET clientSocket = accept(listening, (struct sockaddr*)&client, &clientSize);
+    while (quit)
+    {
+        struct sockaddr_in client;
+        int clientSize = sizeof(client);
 
-    char host[NI_MAXHOST];
-    char service[NI_MAXSERV];
+        SOCKET clientSocket = accept(listening, (struct sockaddr*)&client, &clientSize);
 
-    memset(host, 0, NI_MAXHOST);
-    memset(service, 0, NI_MAXSERV);
+        char host[NI_MAXHOST];
+        char service[NI_MAXSERV];
 
-    if (!getnameinfo((struct sockaddr*)&client, sizeof(client), host, NI_MAXHOST, service, NI_MAXSERV, 0)) {
-        printf("%s connected on port %s\n", host, service);
-    } else {
-        printf("%s connected on port %d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+        memset(host, 0, NI_MAXHOST);
+        memset(service, 0, NI_MAXSERV);
+
+        if (!getnameinfo((struct sockaddr*)&client, sizeof(client), host, NI_MAXHOST, service, NI_MAXSERV, 0)) {
+            printf("%s connected on port %s\n", host, service);
+        } else {
+            printf("%s connected on port %d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+        }
+
+        /* HANDLE hThread = (HANDLE) */
+        _beginthreadex(NULL, 0, &handleSocket, &clientSocket, 0, NULL);
     }
 
     closesocket(listening);
-
-    Header head;
-    game_t game = DEFAULT_GAME_T;
-
-    int quit = 1;
-    while(quit)
-    {
-        if (receive(clientSocket, &head, sizeof head)) {
-            fprintf(stderr, "Error in receive()\n");
-            break;
-        }
-
-        switch (head.type) 
-        {
-        case GAME_HEADER:
-            GameData data;
-            receive(clientSocket, &data, sizeof data);
-            printf("client: %d, %d, %d, %d\n", data.x1, data.y1, data.x2, data.y2);
-            handle_move(&game, data);
-            game.player = (game.player == WHITE_PLAYER) ? BLACK_PLAYER : WHITE_PLAYER;
-            puts("handled");
-            send(clientSocket, (char*)&game, sizeof game, 0);
-            puts("sent");
-            break;
-        case CHAT_HEADER: {break;}
-        case EXIT_HEADER:
-            quit = 0;
-            break;
-        }
-    }
-
-    closesocket(clientSocket);
 
     WSACleanup();
 
