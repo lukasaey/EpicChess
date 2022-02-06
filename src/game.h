@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#define SCREEN_SIZE 800
 #define BOARD_N 8
 #define CELL_SIZE (SCREEN_SIZE/BOARD_N)
 
@@ -69,10 +68,7 @@
     .in_check = false, \
 } \
 
-typedef enum EGameType {
-    OFFLINE_GAME,
-    ONLINE_GAME,
-} EGameType;
+extern int SCREEN_SIZE;
 
 typedef enum {
     WHITE_PLAYER,

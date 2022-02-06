@@ -7,6 +7,6 @@ typedef struct {
 } PieceTexture;
 
 void render_game(const game_t *game, SDL_Renderer *renderer);
-void preload_textures(SDL_Renderer *renderer);
+void load_textures(SDL_Renderer *renderer, int w, int h);
 
 #endif // RENDER_H

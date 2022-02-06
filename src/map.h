@@ -11,14 +11,13 @@ typedef struct {
 typedef struct {
     game_t *game;
     PlrPair players;
-    bool valid;
 } SockData;
 
 typedef struct {
-    SockData data[MAP_SIZE];
+    SockData *data;
     size_t size;
 } Map;
 
-inline Map mk_map();
-bool map_add(Map *map, SOCKET sock, SockData data);
-SockData map_get(Map *map, SOCKET sock);
+Map mk_map();
+bool map_add(Map *map, char* id, SockData data);
+SockData* map_get(Map *map, char* id);

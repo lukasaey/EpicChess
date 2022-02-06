@@ -10,22 +10,21 @@
 #include "nanosvg.h"
 #include "nanosvgrast.h"
 
-PieceTexture pawn_texture;
-PieceTexture bishop_texture;
-PieceTexture knight_texture;
-PieceTexture rook_texture;
-PieceTexture queen_texture;
-PieceTexture king_texture;
+static PieceTexture pawn_texture;
+static PieceTexture bishop_texture;
+static PieceTexture knight_texture;
+static PieceTexture rook_texture;
+static PieceTexture queen_texture;
+static PieceTexture king_texture;
 
 
-SDL_Texture* svgto_sdltexture(SDL_Renderer *renderer, char* filename)
+SDL_Texture* svg_to_sdltexture(SDL_Renderer *renderer, char* filename, int w, int h)
 {
-    NSVGimage *image = NULL;
+    NSVGimage *svg_image = NULL;
 	NSVGrasterizer *rast = NULL;
-    unsigned char* img = NULL;
 
-    image = nsvgParseFromFile(filename, "px", SCREEN_SIZE/2);
-    if (image == NULL) {
+    svg_image = nsvgParseFromFile(filename, "px", 96);
+    if (svg_image == NULL) {
 		fprintf(stderr, "Could not open SVG image.\n");
 		exit(1);
 	}
@@ -36,54 +35,50 @@ SDL_Texture* svgto_sdltexture(SDL_Renderer *renderer, char* filename)
 		exit(1);
 	}
 
-    int w = SCREEN_SIZE;
-	int h = SCREEN_SIZE;
-
-	img = malloc(w*h*4);
+	unsigned char* img = malloc(w*h*4);
 	if (img == NULL) {
 		fprintf(stderr, "Could not alloc image buffer.\n");
 		exit(1);
 	}
 
-    nsvgRasterize(rast, image, 0,0, 0.125, img, w, h, w*4);
+    nsvgRasterize(rast, svg_image, 0,0, h / svg_image->height, img, w, h, w*4);
 
     Uint32 rmask, gmask, bmask, amask;
     #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    rmask = 0xff000000;
-    gmask = 0x00ff0000;
-    bmask = 0x0000ff00;
-    amask = 0x000000ff;
+        rmask = 0xff000000;
+        gmask = 0x00ff0000;
+        bmask = 0x0000ff00;
+        amask = 0x000000ff;
     #else // little endian, like x86
-    rmask = 0x000000ff;
-    gmask = 0x0000ff00;
-    bmask = 0x00ff0000;
-    amask = 0xff000000;
+        rmask = 0x000000ff;
+        gmask = 0x0000ff00;
+        bmask = 0x00ff0000;
+        amask = 0xff000000;
     #endif
 
     SDL_Surface *surf = SDL_CreateRGBSurfaceFrom(img, w, h, 32, 4*w,
                              rmask, gmask, bmask, amask);
     
-    /* TODO: free surface and rast if possible */
     SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
 
     return tex;
 }
 
-void preload_textures(SDL_Renderer *renderer)
+void load_textures(SDL_Renderer *renderer, int w, int h)
 {
-    pawn_texture.white = svgto_sdltexture(renderer, W_PAWN_FILEPATH);
-    bishop_texture.white = svgto_sdltexture(renderer, W_BISHOP_FILEPATH);
-    knight_texture.white = svgto_sdltexture(renderer, W_KNIGHT_FILEPATH);
-    rook_texture.white = svgto_sdltexture(renderer, W_ROOK_FILEPATH);
-    queen_texture.white = svgto_sdltexture(renderer, W_QUEEN_FILEPATH);
-    king_texture.white = svgto_sdltexture(renderer, W_KING_FILEPATH);
+    pawn_texture.white = svg_to_sdltexture(renderer, W_PAWN_FILEPATH, w, h);
+    bishop_texture.white = svg_to_sdltexture(renderer, W_BISHOP_FILEPATH, w, h);
+    knight_texture.white = svg_to_sdltexture(renderer, W_KNIGHT_FILEPATH, w, h);
+    rook_texture.white = svg_to_sdltexture(renderer, W_ROOK_FILEPATH, w, h);
+    queen_texture.white = svg_to_sdltexture(renderer, W_QUEEN_FILEPATH, w, h);
+    king_texture.white = svg_to_sdltexture(renderer, W_KING_FILEPATH, w, h);
     
-    pawn_texture.black = svgto_sdltexture(renderer, B_PAWN_FILEPATH);
-    bishop_texture.black = svgto_sdltexture(renderer, B_BISHOP_FILEPATH);
-    knight_texture.black = svgto_sdltexture(renderer, B_KNIGHT_FILEPATH);
-    rook_texture.black = svgto_sdltexture(renderer, B_ROOK_FILEPATH);
-    queen_texture.black = svgto_sdltexture(renderer, B_QUEEN_FILEPATH);
-    king_texture.black = svgto_sdltexture(renderer, B_KING_FILEPATH);
+    pawn_texture.black = svg_to_sdltexture(renderer, B_PAWN_FILEPATH, w, h);
+    bishop_texture.black = svg_to_sdltexture(renderer, B_BISHOP_FILEPATH, w, h);
+    knight_texture.black = svg_to_sdltexture(renderer, B_KNIGHT_FILEPATH, w, h);
+    rook_texture.black = svg_to_sdltexture(renderer, B_ROOK_FILEPATH, w, h);
+    queen_texture.black = svg_to_sdltexture(renderer, B_QUEEN_FILEPATH, w, h);
+    king_texture.black = svg_to_sdltexture(renderer, B_KING_FILEPATH, w, h);
 }
 
 void render_piece(uint8_t piece, int x, int y, SDL_Renderer *renderer)
@@ -93,8 +88,8 @@ void render_piece(uint8_t piece, int x, int y, SDL_Renderer *renderer)
     SDL_Rect rect = {
         .y = y*CELL_SIZE, 
         .x = x*CELL_SIZE,
-        .h = SCREEN_SIZE,
-        .w = SCREEN_SIZE,
+        .h = SCREEN_SIZE/BOARD_N,
+        .w = SCREEN_SIZE/BOARD_N,
     };
 
     bool is_white = piece & WHITE;
@@ -152,7 +147,7 @@ void render_game(const game_t *game, SDL_Renderer *renderer)
                 (color & 0xff000000) >> 24,
                 (color & 0xff0000) >> 16,
                 (color & 0xff00) >> 8,
-                color & 0xff
+                 color & 0xff
             );
             SDL_RenderFillRect(renderer, &rect);
 
@@ -169,7 +164,7 @@ void render_game(const game_t *game, SDL_Renderer *renderer)
                 (clr & 0xff000000) >> 24,
                 (clr & 0xff0000) >> 16,
                 (clr & 0xff00) >> 8,
-                clr & 0xff
+                 clr & 0xff
             );
             SDL_RenderFillRect(renderer, &rect);
             

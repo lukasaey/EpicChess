@@ -1,11 +1,10 @@
-#include "game.h"
-#include "logic.h"
-#include "net.h"
-
 #include <stdbool.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "game.h"
+#include "logic.h"
 
 bool is_line_empty
 (const game_t *game, int32_t x1, int32_t y1, int32_t x2, int32_t y2)
@@ -35,8 +34,8 @@ bool is_diag_empty /* TODO: improvements, like in is_line_empty */
 {
     assert(x1 <= BOARD_N && x2 <= BOARD_N && y1 <= BOARD_N && y2 <= BOARD_N);
 
-    uint32_t min_x = min(x1, x2);
-    uint32_t max_x = max(x1, x2); 
+    uint32_t min_x = fmin(x1, x2);
+    uint32_t max_x = fmax(x1, x2); 
     uint32_t y = (min_x == x1) ? y1 : y2;
     uint32_t noty = (min_x != x1) ? y1 : y2;
 
@@ -283,30 +282,6 @@ LegalInfo is_legal(const game_t *game, size_t origin, size_t dest)
     LegalInfo legal = _is_legal(game, origin, dest);
     legal.legal = legal.legal && !is_check(game, legal, dest);
     return legal;
-}
-
-int send_input(game_t *game, SOCKET sock, int x, int y)
-{
-    if (game->selected == NONE_SELECTED) {
-        game->selected = y * BOARD_N + x;
-        return 0;
-    }
-
-    Header head = {
-        .type = GAME_HEADER,
-    };
-
-    GameData data = {
-        .x1 = game->selected % BOARD_N,
-        .y1 = game->selected / BOARD_N,
-        .x2 = x,
-        .y2 = y,
-    };
-
-    if (send_move(sock, game, &head, &data)) return 1;
-    game->selected = NONE_SELECTED;
-
-    return 0;
 }
 
 int clicked_on_square(game_t *game, int x, int y)
